@@ -4,8 +4,6 @@ export interface Task {
   id: string;
   text: string;
   done: boolean;
-  dueDate?: string;
-  link?: string;
 }
 
 export interface Page {
@@ -65,16 +63,10 @@ export function setActivePage(id: string) {
   $state.set({ ...state, activePageId: id });
 }
 
-export function addTask(text: string, dueDate?: string, link?: string) {
+export function addTask(text: string) {
   const state = $state.get();
   if (!state.activePageId) return;
-  const task: Task = {
-    id: generateId(),
-    text,
-    done: false,
-    dueDate: dueDate || undefined,
-    link: link || undefined,
-  };
+  const task: Task = { id: generateId(), text, done: false };
   const pages = state.pages.map((p) =>
     p.id === state.activePageId ? { ...p, tasks: [...p.tasks, task] } : p,
   );
@@ -101,24 +93,6 @@ export function deleteTask(taskId: string) {
   const pages = state.pages.map((p) =>
     p.id === state.activePageId
       ? { ...p, tasks: p.tasks.filter((t) => t.id !== taskId) }
-      : p,
-  );
-  $state.set({ ...state, pages });
-}
-
-export function updateTask(
-  taskId: string,
-  updates: Partial<Pick<Task, "text" | "dueDate" | "link">>,
-) {
-  const state = $state.get();
-  const pages = state.pages.map((p) =>
-    p.id === state.activePageId
-      ? {
-          ...p,
-          tasks: p.tasks.map((t) =>
-            t.id === taskId ? { ...t, ...updates } : t,
-          ),
-        }
       : p,
   );
   $state.set({ ...state, pages });

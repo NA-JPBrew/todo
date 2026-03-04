@@ -1,67 +1,20 @@
 import { useStore } from "@nanostores/preact";
 import { useState, useRef, useCallback } from "preact/hooks";
 import { $activePage, $state, addTask, toggleTask, deleteTask } from "../store";
-import { $locale, t } from "../i18n";
-import { $settings } from "../settings";
-import { createRipple, celebrateCompletion } from "../ripple";
 
-interface Props {
-  onMenuOpen: () => void;
-}
-
-function isOverdue(dueDate?: string): boolean {
-  if (!dueDate) return false;
-  return new Date(dueDate) < new Date();
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = d.getTime() - now.getTime();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-  if (days === 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  if (days === -1) return "Yesterday";
-  if (days < -1) return `${Math.abs(days)} days ago`;
-  if (days <= 7) return `In ${days} days`;
-
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-export default function TaskList({ onMenuOpen }: Props) {
+export default function TaskList() {
   const page = useStore($activePage);
   const state = useStore($state);
-  const settings = useStore($settings);
-  useStore($locale);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [taskText, setTaskText] = useState("");
-  const [taskDate, setTaskDate] = useState("");
-  const [taskLink, setTaskLink] = useState("");
-
-  const handleRipple = useCallback(
-    (e: MouseEvent) => {
-      createRipple(e, settings.theme);
-    },
-    [settings.theme],
-  );
 
   if (state.pages.length === 0) {
     return (
       <main class="main-content">
-        <header class="content-header">
-          <button
-            class="menu-toggle"
-            onClick={onMenuOpen}
-            onMouseDown={handleRipple}
-          >
-            <span class="material-symbols-outlined">menu</span>
-          </button>
-        </header>
         <div class="empty-state">
           <span class="material-symbols-outlined empty-icon">note_stack</span>
-          <p class="empty-title">{t("empty.noPages")}</p>
-          <p class="empty-sub">{t("empty.noPagesDesc")}</p>
+          <p class="empty-title">No pages yet</p>
+          <p class="empty-sub">Create a page from the sidebar to get started</p>
         </div>
       </main>
     );
@@ -70,19 +23,10 @@ export default function TaskList({ onMenuOpen }: Props) {
   if (!page) {
     return (
       <main class="main-content">
-        <header class="content-header">
-          <button
-            class="menu-toggle"
-            onClick={onMenuOpen}
-            onMouseDown={handleRipple}
-          >
-            <span class="material-symbols-outlined">menu</span>
-          </button>
-        </header>
         <div class="empty-state">
           <span class="material-symbols-outlined empty-icon">touch_app</span>
-          <p class="empty-title">{t("empty.selectPage")}</p>
-          <p class="empty-sub">{t("empty.selectPageDesc")}</p>
+          <p class="empty-title">Select a page</p>
+          <p class="empty-sub">Pick a page from the sidebar</p>
         </div>
       </main>
     );
@@ -91,10 +35,8 @@ export default function TaskList({ onMenuOpen }: Props) {
   const handleAdd = () => {
     const text = taskText.trim();
     if (!text) return;
-    addTask(text, taskDate || undefined, taskLink || undefined);
+    addTask(text);
     setTaskText("");
-    setTaskDate("");
-    setTaskLink("");
     setDialogOpen(false);
   };
 
@@ -125,21 +67,8 @@ export default function TaskList({ onMenuOpen }: Props) {
   return (
     <main class="main-content">
       <header class="content-header">
-        <button
-          class="menu-toggle"
-          onClick={onMenuOpen}
-          onMouseDown={handleRipple}
-        >
-          <span class="material-symbols-outlined">menu</span>
-        </button>
-        <div class="header-info">
-          <h2 class="page-title">{page.name}</h2>
-          <div class="header-meta">
-            <span class="task-count">
-              {t("task.remaining", { n: pending.length })}
-            </span>
-          </div>
-        </div>
+        <h2 class="page-title">{page.name}</h2>
+        <span class="task-count">{pending.length} remaining</span>
       </header>
 
       {page.tasks.length > 0 && (
@@ -154,19 +83,15 @@ export default function TaskList({ onMenuOpen }: Props) {
       {page.tasks.length === 0 ? (
         <div class="empty-state small">
           <span class="material-symbols-outlined empty-icon">add_task</span>
-          <p class="empty-title">{t("empty.noTasks")}</p>
-          <p class="empty-sub">{t("empty.noTasksDesc")}</p>
+          <p class="empty-title">No tasks</p>
+          <p class="empty-sub">Tap + to add your first task</p>
         </div>
       ) : (
         <div class="task-sections">
           {pending.length > 0 && (
             <section class="task-section">
-              {pending.map((task, index) => (
-                <div
-                  key={task.id}
-                  class={`task-item ${isOverdue(task.dueDate) ? "overdue" : ""}`}
-                  style={{ animationDelay: `${index * 40}ms` }}
-                >
+              {pending.map((task) => (
+                <div key={task.id} class="task-item">
                   <button
                     class="task-check"
                     onClick={(e) => handleToggle(task.id, task.done, e)}
@@ -174,41 +99,7 @@ export default function TaskList({ onMenuOpen }: Props) {
                   >
                     <span class="material-symbols-outlined">circle</span>
                   </button>
-                  <div class="task-body">
-                    <span class="task-text">{task.text}</span>
-                    <div class="task-meta">
-                      {task.dueDate && (
-                        <span
-                          class={`task-badge ${isOverdue(task.dueDate) ? "overdue" : ""}`}
-                        >
-                          <span class="material-symbols-outlined badge-icon">
-                            schedule
-                          </span>
-                          {formatDate(task.dueDate)}
-                        </span>
-                      )}
-                      {task.link && (
-                        <a
-                          class="task-badge link"
-                          href={task.link}
-                          target="_blank"
-                          rel="noopener"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span class="material-symbols-outlined badge-icon">
-                            link
-                          </span>
-                          {(() => {
-                            try {
-                              return new URL(task.link).hostname;
-                            } catch {
-                              return task.link;
-                            }
-                          })()}
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                  <span class="task-text">{task.text}</span>
                   <button
                     class="task-delete"
                     onClick={() => deleteTask(task.id)}
@@ -222,9 +113,7 @@ export default function TaskList({ onMenuOpen }: Props) {
           )}
           {completed.length > 0 && (
             <section class="task-section">
-              <p class="section-label">
-                {t("task.completed", { n: completed.length })}
-              </p>
+              <p class="section-label">Completed ({completed.length})</p>
               {completed.map((task) => (
                 <div key={task.id} class="task-item done">
                   <button
@@ -234,9 +123,7 @@ export default function TaskList({ onMenuOpen }: Props) {
                   >
                     <span class="material-symbols-outlined">check_circle</span>
                   </button>
-                  <div class="task-body">
-                    <span class="task-text">{task.text}</span>
-                  </div>
+                  <span class="task-text">{task.text}</span>
                   <button
                     class="task-delete"
                     onClick={() => deleteTask(task.id)}
@@ -254,8 +141,7 @@ export default function TaskList({ onMenuOpen }: Props) {
       <button
         class="fab"
         onClick={() => setDialogOpen(true)}
-        onMouseDown={handleRipple}
-        aria-label={t("task.add")}
+        aria-label="Add task"
       >
         <span class="material-symbols-outlined">add</span>
       </button>
@@ -263,61 +149,22 @@ export default function TaskList({ onMenuOpen }: Props) {
       {dialogOpen && (
         <div class="dialog-overlay" onClick={() => setDialogOpen(false)}>
           <div class="dialog" onClick={(e) => e.stopPropagation()}>
-            <h3 class="dialog-title">{t("task.add")}</h3>
+            <h3 class="dialog-title">New Task</h3>
             <input
               class="dialog-input"
               type="text"
-              placeholder={t("task.placeholder")}
+              placeholder="What needs to be done?"
               value={taskText}
               onInput={(e) => setTaskText((e.target as HTMLInputElement).value)}
               onKeyDown={handleKeyDown}
               autoFocus
             />
-            <div class="dialog-field">
-              <label class="dialog-field-label">
-                <span class="material-symbols-outlined field-icon">
-                  schedule
-                </span>
-                {t("task.dueDate")}
-              </label>
-              <input
-                class="dialog-input small"
-                type="datetime-local"
-                value={taskDate}
-                onInput={(e) =>
-                  setTaskDate((e.target as HTMLInputElement).value)
-                }
-              />
-            </div>
-            <div class="dialog-field">
-              <label class="dialog-field-label">
-                <span class="material-symbols-outlined field-icon">link</span>
-                {t("task.link")}
-              </label>
-              <input
-                class="dialog-input small"
-                type="url"
-                placeholder="https://..."
-                value={taskLink}
-                onInput={(e) =>
-                  setTaskLink((e.target as HTMLInputElement).value)
-                }
-              />
-            </div>
             <div class="dialog-actions">
-              <button
-                class="dialog-btn"
-                onMouseDown={handleRipple}
-                onClick={() => setDialogOpen(false)}
-              >
-                {t("task.cancel")}
+              <button class="dialog-btn" onClick={() => setDialogOpen(false)}>
+                Cancel
               </button>
-              <button
-                class="dialog-btn primary"
-                onMouseDown={handleRipple}
-                onClick={handleAdd}
-              >
-                {t("task.submit")}
+              <button class="dialog-btn primary" onClick={handleAdd}>
+                Add
               </button>
             </div>
           </div>

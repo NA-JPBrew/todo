@@ -8,20 +8,9 @@ import {
   exportBackup,
   importBackup,
 } from "../store";
-import { $locale, t } from "../i18n";
-import { $settings } from "../settings";
-import { createRipple } from "../ripple";
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  onOpenSettings: () => void;
-}
-
-export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
+export default function Sidebar() {
   const state = useStore($state);
-  const settings = useStore($settings);
-  useStore($locale);
   const [newPageName, setNewPageName] = useState("");
   const [adding, setAdding] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -66,127 +55,84 @@ export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
     const reader = new FileReader();
     reader.onload = () => {
       const ok = importBackup(reader.result as string);
-      if (!ok) alert(t("backup.invalid"));
+      if (!ok) alert("Invalid backup file");
     };
     reader.readAsText(file);
   };
 
-  const handlePageClick = (pageId: string) => {
-    setActivePage(pageId);
-    onClose();
-  };
-
   return (
-    <>
-      {open && <div class="sidebar-backdrop" onClick={onClose} />}
-      <aside class={`sidebar ${open ? "open" : ""}`}>
-        <div class="sidebar-header">
-          <span class="material-symbols-outlined sidebar-logo">checklist</span>
-          <h1 class="sidebar-title">{t("app.title")}</h1>
-        </div>
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="material-symbols-outlined sidebar-logo">checklist</span>
+        <h1 class="sidebar-title">Todo</h1>
+      </div>
 
-        <nav class="sidebar-nav">
-          {state.pages.map((page) => (
+      <nav class="sidebar-nav">
+        {state.pages.map((page) => (
+          <button
+            key={page.id}
+            class={`nav-item ${page.id === state.activePageId ? "active" : ""}`}
+            onClick={() => setActivePage(page.id)}
+          >
+            <span class="material-symbols-outlined nav-icon">description</span>
+            <span class="nav-label">{page.name}</span>
             <button
-              key={page.id}
-              class={`nav-item ${page.id === state.activePageId ? "active" : ""}`}
-              onClick={() => handlePageClick(page.id)}
-              onMouseDown={handleRipple}
-            >
-              <span class="material-symbols-outlined nav-icon">
-                description
-              </span>
-              <span class="nav-label">{page.name}</span>
-              <span class="nav-task-count">
-                {page.tasks.filter((t) => !t.done).length}
-              </span>
-              <button
-                class="nav-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deletePage(page.id);
-                }}
-                aria-label="Delete page"
-              >
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </button>
-          ))}
-        </nav>
-
-        {adding ? (
-          <div class="add-page-input">
-            <input
-              type="text"
-              placeholder={t("page.placeholder")}
-              value={newPageName}
-              onInput={(e) =>
-                setNewPageName((e.target as HTMLInputElement).value)
-              }
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-            <button
-              class="icon-btn"
-              onClick={handleAddPage}
-              onMouseDown={handleRipple}
-            >
-              <span class="material-symbols-outlined">check</span>
-            </button>
-            <button
-              class="icon-btn"
-              onClick={() => setAdding(false)}
-              onMouseDown={handleRipple}
+              class="nav-delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                deletePage(page.id);
+              }}
+              aria-label="Delete page"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
-          </div>
-        ) : (
-          <button
-            class="add-page-btn"
-            onClick={() => setAdding(true)}
-            onMouseDown={handleRipple}
-          >
-            <span class="material-symbols-outlined">add</span>
-            <span>{t("sidebar.newPage")}</span>
           </button>
-        )}
+        ))}
+      </nav>
 
-        <div class="sidebar-actions">
-          <button
-            class="action-btn"
-            onClick={handleExport}
-            onMouseDown={handleRipple}
-          >
-            <span class="material-symbols-outlined">download</span>
-            <span>{t("sidebar.backup")}</span>
-          </button>
-          <button
-            class="action-btn"
-            onClick={handleImport}
-            onMouseDown={handleRipple}
-          >
-            <span class="material-symbols-outlined">upload</span>
-            <span>{t("sidebar.restore")}</span>
-          </button>
+      {adding ? (
+        <div class="add-page-input">
           <input
-            ref={fileInput}
-            type="file"
-            accept=".json"
-            style={{ display: "none" }}
-            onChange={handleFileChange}
+            type="text"
+            placeholder="Page name..."
+            value={newPageName}
+            onInput={(e) =>
+              setNewPageName((e.target as HTMLInputElement).value)
+            }
+            onKeyDown={handleKeyDown}
+            autoFocus
           />
+          <button class="icon-btn" onClick={handleAddPage}>
+            <span class="material-symbols-outlined">check</span>
+          </button>
+          <button class="icon-btn" onClick={() => setAdding(false)}>
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
-
-        <button
-          class="action-btn settings-btn"
-          onClick={onOpenSettings}
-          onMouseDown={handleRipple}
-        >
-          <span class="material-symbols-outlined">settings</span>
-          <span>{t("sidebar.settings")}</span>
+      ) : (
+        <button class="add-page-btn" onClick={() => setAdding(true)}>
+          <span class="material-symbols-outlined">add</span>
+          <span>New Page</span>
         </button>
-      </aside>
-    </>
+      )}
+
+      <div class="sidebar-actions">
+        <button class="action-btn" onClick={handleExport}>
+          <span class="material-symbols-outlined">download</span>
+          <span>Backup</span>
+        </button>
+        <button class="action-btn" onClick={handleImport}>
+          <span class="material-symbols-outlined">upload</span>
+          <span>Restore</span>
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".json"
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+      </div>
+    </aside>
   );
 }
