@@ -1,0 +1,20 @@
+{
+  "name": "todo",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/preact": "^4.1.3",
+    "@material/web": "^2.4.1",
+    "@nanostores/preact": "^1.0.0",
+    "astro": "^5.17.1",
+    "material-symbols": "^0.40.2",
+    "nanostores": "^1.1.1",
+    "preact": "^10.28.4"
+  }
+}

@@ -1,0 +1,28 @@
+---
+
+---
+
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Todo</title>
+		<meta name="description" content="A fast, Material Design 3 Todo application" />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+		/>
+	</head>
+	<body>
+		<div id="app"></div>
+	</body>
+</html>
+
+<script>
+	import '../styles/global.css'
+	import { h, render } from 'preact'
+	import App from '../components/App'
+
+	render(h(App, null), document.getElementById('app')!)
+</script>
