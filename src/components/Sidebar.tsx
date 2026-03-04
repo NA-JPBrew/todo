@@ -1,5 +1,5 @@
 import { useStore } from "@nanostores/preact";
-import { useState, useRef } from "preact/hooks";
+import { useState, useRef, useCallback } from "preact/hooks";
 import {
   $state,
   addPage,
@@ -9,6 +9,8 @@ import {
   importBackup,
 } from "../store";
 import { $locale, t } from "../i18n";
+import { $settings } from "../settings";
+import { createRipple } from "../ripple";
 
 interface Props {
   open: boolean;
@@ -18,10 +20,18 @@ interface Props {
 
 export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
   const state = useStore($state);
+  const settings = useStore($settings);
   useStore($locale);
   const [newPageName, setNewPageName] = useState("");
   const [adding, setAdding] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const handleRipple = useCallback(
+    (e: MouseEvent) => {
+      createRipple(e, settings.theme);
+    },
+    [settings.theme],
+  );
 
   const handleAddPage = () => {
     const name = newPageName.trim();
@@ -81,11 +91,15 @@ export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
               key={page.id}
               class={`nav-item ${page.id === state.activePageId ? "active" : ""}`}
               onClick={() => handlePageClick(page.id)}
+              onMouseDown={handleRipple}
             >
               <span class="material-symbols-outlined nav-icon">
                 description
               </span>
               <span class="nav-label">{page.name}</span>
+              <span class="nav-task-count">
+                {page.tasks.filter((t) => !t.done).length}
+              </span>
               <button
                 class="nav-delete"
                 onClick={(e) => {
@@ -112,26 +126,46 @@ export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
               onKeyDown={handleKeyDown}
               autoFocus
             />
-            <button class="icon-btn" onClick={handleAddPage}>
+            <button
+              class="icon-btn"
+              onClick={handleAddPage}
+              onMouseDown={handleRipple}
+            >
               <span class="material-symbols-outlined">check</span>
             </button>
-            <button class="icon-btn" onClick={() => setAdding(false)}>
+            <button
+              class="icon-btn"
+              onClick={() => setAdding(false)}
+              onMouseDown={handleRipple}
+            >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
         ) : (
-          <button class="add-page-btn" onClick={() => setAdding(true)}>
+          <button
+            class="add-page-btn"
+            onClick={() => setAdding(true)}
+            onMouseDown={handleRipple}
+          >
             <span class="material-symbols-outlined">add</span>
             <span>{t("sidebar.newPage")}</span>
           </button>
         )}
 
         <div class="sidebar-actions">
-          <button class="action-btn" onClick={handleExport}>
+          <button
+            class="action-btn"
+            onClick={handleExport}
+            onMouseDown={handleRipple}
+          >
             <span class="material-symbols-outlined">download</span>
             <span>{t("sidebar.backup")}</span>
           </button>
-          <button class="action-btn" onClick={handleImport}>
+          <button
+            class="action-btn"
+            onClick={handleImport}
+            onMouseDown={handleRipple}
+          >
             <span class="material-symbols-outlined">upload</span>
             <span>{t("sidebar.restore")}</span>
           </button>
@@ -144,7 +178,11 @@ export default function Sidebar({ open, onClose, onOpenSettings }: Props) {
           />
         </div>
 
-        <button class="action-btn settings-btn" onClick={onOpenSettings}>
+        <button
+          class="action-btn settings-btn"
+          onClick={onOpenSettings}
+          onMouseDown={handleRipple}
+        >
           <span class="material-symbols-outlined">settings</span>
           <span>{t("sidebar.settings")}</span>
         </button>

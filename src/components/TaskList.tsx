@@ -1,7 +1,9 @@
 import { useStore } from "@nanostores/preact";
-import { useState } from "preact/hooks";
+import { useState, useRef, useCallback } from "preact/hooks";
 import { $activePage, $state, addTask, toggleTask, deleteTask } from "../store";
 import { $locale, t } from "../i18n";
+import { $settings } from "../settings";
+import { createRipple, celebrateCompletion } from "../ripple";
 
 interface Props {
   onMenuOpen: () => void;
@@ -30,17 +32,29 @@ function formatDate(dateStr: string): string {
 export default function TaskList({ onMenuOpen }: Props) {
   const page = useStore($activePage);
   const state = useStore($state);
+  const settings = useStore($settings);
   useStore($locale);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [taskText, setTaskText] = useState("");
   const [taskDate, setTaskDate] = useState("");
   const [taskLink, setTaskLink] = useState("");
 
+  const handleRipple = useCallback(
+    (e: MouseEvent) => {
+      createRipple(e, settings.theme);
+    },
+    [settings.theme],
+  );
+
   if (state.pages.length === 0) {
     return (
       <main class="main-content">
         <header class="content-header">
-          <button class="menu-toggle" onClick={onMenuOpen}>
+          <button
+            class="menu-toggle"
+            onClick={onMenuOpen}
+            onMouseDown={handleRipple}
+          >
             <span class="material-symbols-outlined">menu</span>
           </button>
         </header>
@@ -57,7 +71,11 @@ export default function TaskList({ onMenuOpen }: Props) {
     return (
       <main class="main-content">
         <header class="content-header">
-          <button class="menu-toggle" onClick={onMenuOpen}>
+          <button
+            class="menu-toggle"
+            onClick={onMenuOpen}
+            onMouseDown={handleRipple}
+          >
             <span class="material-symbols-outlined">menu</span>
           </button>
         </header>
@@ -85,20 +103,53 @@ export default function TaskList({ onMenuOpen }: Props) {
     if (e.key === "Escape") setDialogOpen(false);
   };
 
+  const handleToggle = (
+    taskId: string,
+    currentDone: boolean,
+    e: MouseEvent,
+  ) => {
+    if (!currentDone) {
+      const target = (e.currentTarget as HTMLElement).closest(".task-item");
+      if (target) celebrateCompletion(target as HTMLElement);
+    }
+    toggleTask(taskId);
+  };
+
   const pending = page.tasks.filter((t) => !t.done);
   const completed = page.tasks.filter((t) => t.done);
+  const progress =
+    page.tasks.length > 0
+      ? Math.round((completed.length / page.tasks.length) * 100)
+      : 0;
 
   return (
     <main class="main-content">
       <header class="content-header">
-        <button class="menu-toggle" onClick={onMenuOpen}>
+        <button
+          class="menu-toggle"
+          onClick={onMenuOpen}
+          onMouseDown={handleRipple}
+        >
           <span class="material-symbols-outlined">menu</span>
         </button>
-        <h2 class="page-title">{page.name}</h2>
-        <span class="task-count">
-          {t("task.remaining", { n: pending.length })}
-        </span>
+        <div class="header-info">
+          <h2 class="page-title">{page.name}</h2>
+          <div class="header-meta">
+            <span class="task-count">
+              {t("task.remaining", { n: pending.length })}
+            </span>
+          </div>
+        </div>
       </header>
+
+      {page.tasks.length > 0 && (
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span class="progress-label">{progress}%</span>
+        </div>
+      )}
 
       {page.tasks.length === 0 ? (
         <div class="empty-state small">
@@ -110,14 +161,15 @@ export default function TaskList({ onMenuOpen }: Props) {
         <div class="task-sections">
           {pending.length > 0 && (
             <section class="task-section">
-              {pending.map((task) => (
+              {pending.map((task, index) => (
                 <div
                   key={task.id}
                   class={`task-item ${isOverdue(task.dueDate) ? "overdue" : ""}`}
+                  style={{ animationDelay: `${index * 40}ms` }}
                 >
                   <button
                     class="task-check"
-                    onClick={() => toggleTask(task.id)}
+                    onClick={(e) => handleToggle(task.id, task.done, e)}
                     aria-label="Toggle task"
                   >
                     <span class="material-symbols-outlined">circle</span>
@@ -146,7 +198,13 @@ export default function TaskList({ onMenuOpen }: Props) {
                           <span class="material-symbols-outlined badge-icon">
                             link
                           </span>
-                          {new URL(task.link).hostname}
+                          {(() => {
+                            try {
+                              return new URL(task.link).hostname;
+                            } catch {
+                              return task.link;
+                            }
+                          })()}
                         </a>
                       )}
                     </div>
@@ -171,7 +229,7 @@ export default function TaskList({ onMenuOpen }: Props) {
                 <div key={task.id} class="task-item done">
                   <button
                     class="task-check checked"
-                    onClick={() => toggleTask(task.id)}
+                    onClick={(e) => handleToggle(task.id, task.done, e)}
                     aria-label="Toggle task"
                   >
                     <span class="material-symbols-outlined">check_circle</span>
@@ -196,6 +254,7 @@ export default function TaskList({ onMenuOpen }: Props) {
       <button
         class="fab"
         onClick={() => setDialogOpen(true)}
+        onMouseDown={handleRipple}
         aria-label={t("task.add")}
       >
         <span class="material-symbols-outlined">add</span>
@@ -246,10 +305,18 @@ export default function TaskList({ onMenuOpen }: Props) {
               />
             </div>
             <div class="dialog-actions">
-              <button class="dialog-btn" onClick={() => setDialogOpen(false)}>
+              <button
+                class="dialog-btn"
+                onMouseDown={handleRipple}
+                onClick={() => setDialogOpen(false)}
+              >
                 {t("task.cancel")}
               </button>
-              <button class="dialog-btn primary" onClick={handleAdd}>
+              <button
+                class="dialog-btn primary"
+                onMouseDown={handleRipple}
+                onClick={handleAdd}
+              >
                 {t("task.submit")}
               </button>
             </div>
